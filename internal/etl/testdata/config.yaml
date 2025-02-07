@@ -21,6 +21,11 @@ collections:
         - component_thoroughfarename
         - component_postaldescriptor
         - component_addressareaname
+      orderBy:
+        asc:
+          - component_thoroughfarename
+        desc:
+          - component_postaldescriptor
       displayNameTemplate: "{{ .component_thoroughfarename }} - {{ .component_addressareaname | firstupper }}"
       etl:
         suggestTemplates:

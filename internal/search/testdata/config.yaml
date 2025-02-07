@@ -24,6 +24,11 @@ collections:
         - locator_designator_addressnumber
         - locator_designator_addressnumberextension
         - locator_designator_addressnumber2ndextension
+      orderBy:
+        asc:
+          - component_thoroughfarename
+        desc:
+          - component_postaldescriptor
       displayNameTemplate: "{{ .component_thoroughfarename }} - {{ .component_addressareaname | firstupper }} {{ .locator_designator_addressnumber }} {{ .locator_designator_addressnumberextension }} {{ .locator_designator_addressnumber2ndextension }}"
       etl:
         suggestTemplates:

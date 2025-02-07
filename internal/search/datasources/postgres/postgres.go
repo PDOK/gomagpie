@@ -45,8 +45,7 @@ func (p *Postgres) Close() {
 	p.db.Close()
 }
 
-func (p *Postgres) SearchFeaturesAcrossCollections(ctx context.Context, searchTerm string, collections d.CollectionsWithParams,
-	srid d.SRID, limit int) (*d.FeatureCollection, error) {
+func (p *Postgres) SearchFeaturesAcrossCollections(ctx context.Context, searchTerm string, collections d.CollectionsWithParams, srid d.SRID, limit int, orderBy []string, orderBy2 []string) (*d.FeatureCollection, error) {
 
 	queryCtx, cancel := context.WithTimeout(ctx, p.queryTimeout)
 	defer cancel()
@@ -58,7 +57,7 @@ func (p *Postgres) SearchFeaturesAcrossCollections(ctx context.Context, searchTe
 	}
 	termsWildcardConcat := strings.Join(termsWildcard, " & ")
 	termExactConcat := strings.Join(strings.Fields(searchTerm), " | ")
-	query := makeSearchQuery(p.searchIndex, srid)
+	query := makeSearchQuery(p.searchIndex, srid, orderBy, orderBy2)
 
 	// Execute search query
 	names, versions, relevance := collections.NamesAndVersionsAndRelevance()
@@ -72,7 +71,7 @@ func (p *Postgres) SearchFeaturesAcrossCollections(ctx context.Context, searchTe
 	return mapRowsToFeatures(queryCtx, rows)
 }
 
-func makeSearchQuery(index string, srid d.SRID) string {
+func makeSearchQuery(index string, srid d.SRID, orderBy []string, orderBy2 []string) string {
 	// language=postgresql
 	return fmt.Sprintf(`
 	WITH query_wildcard AS (
@@ -99,9 +98,10 @@ func makeSearchQuery(index string, srid d.SRID) string {
 					r.collection_id,
 					r.collection_version,
 					r.feature_id
-				ORDER BY
+				ORDER BY -- keep the same as all other order by clauses
 					r.rank DESC,
-					r.display_name ASC
+					r.display_name ASC,
+					%[3]s
 			) AS row_number
 		FROM (
 			SELECT
@@ -111,6 +111,7 @@ func makeSearchQuery(index string, srid d.SRID) string {
 				r.collection_version,
 				r.geometry_type,
 				r.bbox,
+				r.order_by,
 				CASE WHEN r.display_name=r.suggest THEN
 					(ts_rank(r.ts, (SELECT query FROM query_exact), 1) + 0.01 + ts_rank(r.ts, (SELECT query FROM query_wildcard), 1)) * rel.relevance
 				ELSE
@@ -128,17 +129,19 @@ func makeSearchQuery(index string, srid d.SRID) string {
 					-- make a virtual table by creating tuples from the provided arrays.
 					SELECT * FROM unnest($4::text[], $5::int[])
 				)
-			ORDER BY -- keep the same as outer and row_number 'order by' clause
+			ORDER BY -- keep the same as all other order by clauses
 			    rank DESC,
-			    r.display_name ASC
+			    r.display_name ASC,
+				%[3]s
 			LIMIT 500
 		) r
 	) rn
 	WHERE rn.row_number = 1
-	ORDER BY
+	ORDER BY -- keep the same as all other order by clauses
 	    rn.rank DESC,
-	    rn.display_name ASC
-	LIMIT $1`, index, srid) // don't add user input here, use $X params for user input!
+	    rn.display_name ASC,
+		%[4]s
+	LIMIT $1`, index, srid, strings.Join(orderBy, ","), strings.Join(orderBy2, ",")) // don't add user input here, use $X params for user input!
 }
 
 func mapRowsToFeatures(queryCtx context.Context, rows pgx.Rows) (*d.FeatureCollection, error) {

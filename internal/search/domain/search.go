@@ -1,6 +1,8 @@
 package domain
 
-import "strconv"
+import (
+	"strconv"
+)
 
 const (
 	VersionParam     = "version"

@@ -78,6 +78,9 @@ type Search struct {
 	// +kubebuilder:validation:MinItems=1
 	OGCCollections []RelatedOGCAPIFeaturesCollection `yaml:"ogcCollections" json:"ogcCollections" validate:"required,min=1"`
 
+	// Sort order of the fields when displaying search results
+	OrderBy OrderByFields `yaml:"orderBy,omitempty" json:"orderBy,omitempty" validate:"required"`
+
 	ETL SearchETL `yaml:"etl" json:"etl" validate:"required"`
 }
 
@@ -108,6 +111,14 @@ type RelatedOGCAPIFeaturesCollection struct {
 	// E.g.: "{now()-1h}"
 	// +optional
 	Datetime *string `yaml:"datetime,omitempty" json:"datetime,omitempty"`
+}
+
+type OrderByFields struct {
+	// The fields to be sorted in ascending order
+	Asc []string `yaml:"asc,omitempty" json:"asc,omitempty"` // validate:"required_without=Desc"
+
+	// The fields to be sorted in descending order
+	Desc []string `yaml:"desc,omitempty" json:"desc,omitempty"`
 }
 
 type CollectionLinks struct {

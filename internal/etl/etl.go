@@ -74,7 +74,7 @@ func ImportFile(collection config.GeoSpatialCollection, searchIndex string, file
 	}
 	defer target.Close()
 
-	transformer, err := newTransformer(substitutionsFile, synonymsFile)
+	transformer, err := newTransformer(substitutionsFile, synonymsFile, collection.Search.OrderBy)
 	if err != nil {
 		return err
 	}
@@ -126,6 +126,6 @@ func newTargetToLoad(dbConn string) (Load, error) {
 	return nil, fmt.Errorf("unsupported target database connection: %s", dbConn)
 }
 
-func newTransformer(substitutionsFile string, synonymsFile string) (Transform, error) {
-	return t.NewTransformer(substitutionsFile, synonymsFile)
+func newTransformer(substitutionsFile string, synonymsFile string, orderByFields config.OrderByFields) (Transform, error) {
+	return t.NewTransformer(substitutionsFile, synonymsFile, orderByFields)
 }

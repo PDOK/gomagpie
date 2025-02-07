@@ -32,15 +32,17 @@ type SearchIndexRecord struct {
 	Suggest           string
 	GeometryType      string
 	Bbox              *geom.Polygon
+	OrderBy           map[string]any
 }
 
 type Transformer struct {
 	substAndSynonyms *SubstAndSynonyms
+	orderByFields    config.OrderByFields
 }
 
-func NewTransformer(substitutionsFile string, synonymsFile string) (*Transformer, error) {
+func NewTransformer(substitutionsFile string, synonymsFile string, orderByFields config.OrderByFields) (*Transformer, error) {
 	substAndSynonyms, err := NewSubstAndSynonyms(substitutionsFile, synonymsFile)
-	return &Transformer{substAndSynonyms}, err
+	return &Transformer{substAndSynonyms, orderByFields}, err
 }
 
 func (t Transformer) Transform(records []RawRecord, collection config.GeoSpatialCollection) ([]SearchIndexRecord, error) {
@@ -54,11 +56,12 @@ func (t Transformer) Transform(records []RawRecord, collection config.GeoSpatial
 		if err != nil {
 			return nil, err
 		}
+
 		allFieldValuesByName := t.substAndSynonyms.generate(fieldValuesByName)
 		suggestions := make([]string, 0, len(collection.Search.ETL.SuggestTemplates))
-		for i := range allFieldValuesByName {
+		for _, valuesByName := range allFieldValuesByName {
 			for _, suggestTemplate := range collection.Search.ETL.SuggestTemplates {
-				suggestion, err := t.renderTemplate(suggestTemplate, allFieldValuesByName[i])
+				suggestion, err := t.renderTemplate(suggestTemplate, valuesByName)
 				if err != nil {
 					return nil, err
 				}
@@ -66,6 +69,17 @@ func (t Transformer) Transform(records []RawRecord, collection config.GeoSpatial
 			}
 		}
 		suggestions = slices.Compact(suggestions)
+
+		orderBy := map[string]any{}
+		orderByFieldsAscAndDesc := slices.Concat(t.orderByFields.Asc, t.orderByFields.Desc)
+		for _, valuesByName := range allFieldValuesByName {
+			for _, f := range orderByFieldsAscAndDesc {
+				v, ok := valuesByName[f]
+				if ok {
+					orderBy[f] = v
+				}
+			}
+		}
 
 		bbox, err := r.transformBbox()
 		if err != nil {
@@ -82,6 +96,7 @@ func (t Transformer) Transform(records []RawRecord, collection config.GeoSpatial
 				Suggest:           suggestion,
 				GeometryType:      r.GeometryType,
 				Bbox:              bbox,
+				OrderBy:           orderBy,
 			}
 			result = append(result, resultRecord)
 		}

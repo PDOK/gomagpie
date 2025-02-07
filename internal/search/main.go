@@ -44,11 +44,31 @@ func (s *Search) Search() http.HandlerFunc {
 			return
 		}
 		collections, searchTerm, outputSRID, limit, err := parseQueryParams(r.URL.Query())
+		var orderByClause []string
+		for collection := range collections {
+			c := config.CollectionByID(s.engine.Config, collection)
+			for _, field := range c.Search.OrderBy.Asc {
+				orderByClause = append(orderByClause, fmt.Sprintf("r.order_by->'%s' ASC", field))
+			}
+			for _, field := range c.Search.OrderBy.Desc {
+				orderByClause = append(orderByClause, fmt.Sprintf("r.order_by->'%s' DESC", field))
+			}
+		}
+		var orderByClause2 []string
+		for collection := range collections {
+			c := config.CollectionByID(s.engine.Config, collection)
+			for _, field := range c.Search.OrderBy.Asc {
+				orderByClause2 = append(orderByClause2, fmt.Sprintf("rn.order_by->'%s' ASC", field))
+			}
+			for _, field := range c.Search.OrderBy.Desc {
+				orderByClause2 = append(orderByClause2, fmt.Sprintf("rn.order_by->'%s' DESC", field))
+			}
+		}
 		if err != nil {
 			engine.RenderProblem(engine.ProblemBadRequest, w, err.Error())
 			return
 		}
-		fc, err := s.datasource.SearchFeaturesAcrossCollections(r.Context(), searchTerm, collections, outputSRID, limit)
+		fc, err := s.datasource.SearchFeaturesAcrossCollections(r.Context(), searchTerm, collections, outputSRID, limit, orderByClause, orderByClause2)
 		if err != nil {
 			handleQueryError(w, err)
 			return
