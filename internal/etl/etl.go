@@ -56,6 +56,8 @@ func CreateSearchIndex(dbConn string, searchIndex string, lang language.Tag) err
 }
 
 // ImportFile import source data into target search index using extract-transform-load principle
+//
+//nolint:funlen
 func ImportFile(collection config.GeoSpatialCollection, searchIndex string, filePath string, substitutionsFile string,
 	synonymsFile string, table config.FeatureTable, pageSize int, dbConn string) error {
 
@@ -113,13 +115,11 @@ func ImportFile(collection config.GeoSpatialCollection, searchIndex string, file
 		log.Printf("loaded %d records into target search index: '%s'", loaded, searchIndex)
 		offset += pageSize
 	}
-	log.Printf("completed import of %s", details)
 
-	log.Printf("start optimizations")
 	if err = target.Optimize(); err != nil {
 		return fmt.Errorf("failed optimizing: %w", err)
 	}
-	log.Printf("completed optimizations")
+	log.Printf("completed import of %s", details)
 	return nil
 }
 
