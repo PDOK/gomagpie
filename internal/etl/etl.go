@@ -38,6 +38,9 @@ type Load interface {
 	// Load records into search index
 	Load(records []t.SearchIndexRecord, index string) (int64, error)
 
+	// Optimize once ETL is completed (optionally)
+	Optimize() error
+
 	// Close connection to target database
 	Close()
 }
@@ -110,8 +113,13 @@ func ImportFile(collection config.GeoSpatialCollection, searchIndex string, file
 		log.Printf("loaded %d records into target search index: '%s'", loaded, searchIndex)
 		offset += pageSize
 	}
-
 	log.Printf("completed import of %s", details)
+
+	log.Printf("start optimizations")
+	if err = target.Optimize(); err != nil {
+		return fmt.Errorf("failed optimizing: %w", err)
+	}
+	log.Printf("completed optimizations")
 	return nil
 }
 
