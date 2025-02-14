@@ -20,17 +20,22 @@ const (
 )
 
 type Search struct {
-	engine     *engine.Engine
-	datasource ds.Datasource
-
-	json *jsonFeatures
+	engine           *engine.Engine
+	datasource       ds.Datasource
+	substAndSynonyms *SubstAndSynonyms
+	json             *jsonFeatures
 }
 
-func NewSearch(e *engine.Engine, dbConn string, searchIndex string) *Search {
+func NewSearch(e *engine.Engine, dbConn string, searchIndex string, rewritesFile string, synonymsFile string) *Search {
+	substAndSynonyms, err := NewSubstAndSynonyms(rewritesFile, synonymsFile)
+	if err != nil {
+		log.Fatal(err) // TODO: return err
+	}
 	s := &Search{
-		engine:     e,
-		datasource: newDatasource(e, dbConn, searchIndex),
-		json:       newJSONFeatures(e),
+		engine:           e,
+		datasource:       newDatasource(e, dbConn, searchIndex),
+		json:             newJSONFeatures(e),
+		substAndSynonyms: substAndSynonyms,
 	}
 	e.Router.Get("/search", s.Search())
 	return s
@@ -48,7 +53,9 @@ func (s *Search) Search() http.HandlerFunc {
 			engine.RenderProblem(engine.ProblemBadRequest, w, err.Error())
 			return
 		}
-		fc, err := s.datasource.SearchFeaturesAcrossCollections(r.Context(), searchTerm, collections, outputSRID, limit)
+
+		searchQuery := s.substAndSynonyms.generate(searchTerm)
+		fc, err := s.datasource.SearchFeaturesAcrossCollections(r.Context(), searchQuery, collections, outputSRID, limit)
 		if err != nil {
 			handleQueryError(w, err)
 			return
