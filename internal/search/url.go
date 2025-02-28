@@ -28,7 +28,7 @@ var (
 	searchOperatorsRegex = regexp.MustCompile(`&|\||!|<->`)
 )
 
-func parseQueryParams(query url.Values) (collections d.CollectionsWithParams, searchTerms string, outputSRID d.SRID, limit int, err error) {
+func parseQueryParams(query url.Values) (collections d.CollectionsWithParams, searchTerms string, outputSRID d.SRID, outputCRS string, limit int, err error) {
 	err = validateNoUnknownParams(query)
 	if err != nil {
 		return
@@ -36,6 +36,7 @@ func parseQueryParams(query url.Values) (collections d.CollectionsWithParams, se
 	searchTerms, searchTermErr := parseSearchTerms(query)
 	collections, collErr := parseCollections(query)
 	outputSRID, outputSRIDErr := parseCrsToPostgisSRID(query, crsParam)
+	outputCRS = query.Get(crsParam)
 	limit, limitErr := parseLimit(query)
 	err = errors.Join(collErr, searchTermErr, limitErr, outputSRIDErr)
 	return
