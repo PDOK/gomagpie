@@ -1,3 +1,6 @@
+> [!NOTE]
+> **ARCHIVED, use [GoKoala](https://github.com/PDOK/gokoala).** Gomagpie started out as a fork of GoKoala, evolved independently for over a year, but is now merged back into GoKoala. 
+
 <p align="center">
 <img src="docs/gomagpie.jpeg" alt="Gomagpie" title="Gomagpie" width="300" />
 </p>
